@@ -1,8 +1,7 @@
 - name: (nephele-server) git pull
   git:
-    repo: 'https://github.com/cmusatyalab/elijah-provisioning'
-    dest: "/root/elijah-provisioning"
-    version: nephele
+    repo: 'https://github.com/cmusatyalab/nephele'
+    dest: "/root/nephele"
   tags: git
 
 - name: (nephele-server) get vmx support
@@ -76,14 +75,14 @@
 
 - name: (nephele-server) install requirements with pip
   pip:
-    chdir: /root/elijah-provisioning
+    chdir: /root/nephele
     requirements: requirements.txt
   tags: pippackages
 
 - name: (nephele-server) python setup.py
   shell: python setup.py install
   args:
-    chdir: /root/elijah-provisioning/
+    chdir: /root/nephele/
   tags: pippackages
 
 - name: (nephele-server) create heatmap www dir
@@ -95,7 +94,7 @@
 
 - name: (nephele-server) copy www files
   copy:
-    src: /root/elijah-provisioning/heatmap
+    src: /root/nephele/heatmap
     dest: /var/www/html/heatmap
     remote_src: yes
   tags: directories
@@ -146,7 +145,7 @@
 
 - name: (nephele-server) rules to run in qemu system space (1/2)
   copy:
-    src: /root/elijah-provisioning/TEMPLATE.qemu
+    src: /root/nephele/TEMPLATE.qemu
     dest: /etc/apparmor.d/libvirt/TEMPLATE.qemu
     remote_src: yes
   tags: aa
@@ -157,14 +156,14 @@
 
 - name: (nephele-server) install nephele service
   copy:
-    src: /root/elijah-provisioning/nephele.service
+    src: /root/nephele/nephele.service
     dest: /lib/systemd/system
     remote_src: yes
   tags: services
 
 - name: (nephele-server) install stream-server service
   copy:
-    src: /root/elijah-provisioning/stream-server.service
+    src: /root/nephele/stream-server.service
     dest: /lib/systemd/system
     remote_src: yes
   tags: services

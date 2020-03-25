@@ -22,18 +22,31 @@ We have tested the nephele server components on __Ubuntu 16.04 LTS 64-bit__.
 The nephele client has been tested on __Ubuntu 16.04 LTS 64-bit__ and __Ubuntu 18.04 LTS 64-bit__.
 Both client and server require __Python 2.7.x__.
 
+## Server Installation
+
+The ansible inventory file is used to specify which servers
+
+```bash
+sudo apt install git ansible
+git clone https://github.com/cmusatyalab/nephele
+cd elijah-provisioning/ansible
+ansible-playbook server.yml --ask-sudo-pass
+```
+
+To refresh the git repository, install new source code, and restart the servers you can run the playbook with the following tags:
+
+`ansible-playbook -i inventory server.yml --tags git,pippackages,services`
+
 ## Client Installation
 
 __Your client's ssh key must reside in root's authorized_keys file on each nephele node. You can use `ssh-keygen` to create a public key if you need to and then use `ssh-copy-id root@<node>` to push it to the server nodes, assuming you can authenticate to them.__
 
 ```bash
 sudo apt install git ansible
-git clone -b nephele https://github.com/cmusatyalab/elijah-provisioning
+git clone https://github.com/cmusatyalab/nephele
 cd elijah-provisioning/ansible
 ansible-playbook client.yml --ask-sudo-pass
 ```
-
-## Server Installation
 
 ## Usage
 

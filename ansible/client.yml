@@ -1,6 +1,5 @@
 ---
 - hosts: localhost
-  remote_user: teiszler
-  tags: cloudlet
+  remote_user: user
   roles:
     - client
