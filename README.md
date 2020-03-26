@@ -1,20 +1,21 @@
 # nephele
 
-<description> Please visit our website at [Elijah page](http://elijah.cs.cmu.edu/).
+nephele is a CLI utility that provides capabilities to create, manage, and migrate KVM virtual machines over the wide-area network. Built upon the principles devised and implemented by Kiryong Ha, nephele utilizes deduplication, compression, and bandwidth adaptation to migrate VMs efficiently in WAN environments where the bandwidth and latency characteristics are far below those found in datacenters where traditional VM migration happens. 
+More information, including related publications, can be found on our [website](http://elijah.cs.cmu.edu/).
 
 Copyright (C) 2011-2020 Carnegie Mellon University
 
 ## License
 
-All source code and documentation except modified-QEMU listed below are
+All source code and documentation (except modified-QEMU listed below) are
 under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0.html).
+
+A copy of this license is reproduced in the [LICENSE](LICENSE) file.
 
 To enable on-demand fetching of the virtual machine, we use a modified-QEMU,
 which is distributed under GPLv2.
   - [Repository for modified-QEMU](https://github.com/cmusatyalab/elijah-qemu)
   - [Download link for the binaries](https://owncloud.cmusatyalab.org/owncloud/index.php/s/viEQ29YYOMlkgJm/download)
-
-A copy of this license is reproduced in the [LICENSE](LICENSE) file.
 
 ## Tested Platforms
 
@@ -24,18 +25,22 @@ Both client and server require __Python 2.7.x__.
 
 ## Server Installation
 
-The ansible inventory file is used to specify which servers
+The ansible inventory file contains a [servers] block which lists all the remote servers you wish to run the playbook against. If you are launching the playbook from the server itself, you can just leave 'localhost'. If you want to run against multiple remote servers in parallel, you can specify all of them in the inventory file.
+__NOTE: If you are running the ansible playbook against remote machines, the client machines's ssh key must reside in root's authorized_keys file on each nephele server node. You can use `ssh-keygen` to create a public key if you need to and then use `ssh-copy-id root@<node>` to push it to the server nodes, assuming you can authenticate to them.__
+
 
 ```bash
 sudo apt install git ansible
 git clone https://github.com/cmusatyalab/nephele
-cd elijah-provisioning/ansible
-ansible-playbook server.yml --ask-sudo-pass
+cd nephele/ansible
+ansible-playbook -i inventory server.yml
 ```
 
 To refresh the git repository, install new source code, and restart the servers you can run the playbook with the following tags:
 
 `ansible-playbook -i inventory server.yml --tags git,pippackages,services`
+
+The is the typical scenario to upgrade the code base.
 
 ## Client Installation
 
@@ -44,7 +49,7 @@ __Your client's ssh key must reside in root's authorized_keys file on each nephe
 ```bash
 sudo apt install git ansible
 git clone https://github.com/cmusatyalab/nephele
-cd elijah-provisioning/ansible
+cd nephele/ansible
 ansible-playbook client.yml --ask-sudo-pass
 ```
 
