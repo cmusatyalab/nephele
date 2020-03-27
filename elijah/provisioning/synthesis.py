@@ -1862,7 +1862,6 @@ def synthesize(base_disk, overlay_path, **kwargs):
         new = table_def.Snapshot(os.path.abspath(parsed_handoff_url.path), basevm.hash_value)
         dbconn.add_item(new)
 
-    update_op(op_id, has_ended=True)
     # terminate
     synthesized_VM.monitor.terminate()
     synthesized_VM.monitor.join()
