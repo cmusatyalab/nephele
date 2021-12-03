@@ -27,10 +27,18 @@ from plumbum import SshMachine
 NEPHELE_PORT = 19999
 
 def build_base(args, remote):
+    remote.root.stdout_redirect(sys.stdout) #redirect remote's stdout
+    remote.root.stdin_redirect(sys.stdin) #redirect remote's stdin
+    remote.root.stderr_redirect(sys.stdout) #redirect remote's stderr
     remote.root.build_base(args)
+    remote.root.restore()
 
 def build_snapshot(args, remote):
+    remote.root.stdout_redirect(sys.stdout) #redirect remote's stdout
+    remote.root.stdin_redirect(sys.stdin) #redirect remote's stdin
+    remote.root.stderr_redirect(sys.stdout) #redirect remote's stderr
     remote.root.build_snapshot(args)
+    remote.root.restore()
 
 def list_base(args, remote):
     print(remote.root.list_base(args))
