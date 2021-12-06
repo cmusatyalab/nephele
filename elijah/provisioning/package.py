@@ -526,30 +526,18 @@ class BaseVMPackage(object):
         zip = zipfile.ZipFile(outfile, 'w', zipfile.ZIP_DEFLATED, True)
         zip.comment = 'Cloudlet package for base VM'
         zip.writestr(cls.MANIFEST_FILENAME, xml)
-        zip.close()
 
         # zip library bug at python 2.7.3
         # see more at http://bugs.python.org/issue9720
 
-        #filelist = [base_disk, base_memory, disk_hash, memory_hash]
-        # for filepath in filelist:
-        #    basename = os.path.basename(filepath)
-        #    filesize = os.path.getsize(filepath)
-        #    LOG.info("Zipping %s (%ld bytes) into %s" % (basename, filesize, outfile))
-        #    zip.write(filepath, basename)
-        # zip.close()
-
-        cmd = ['zip', '-j', '-9']
-        cmd += ["%s" % outfile]
-        cmd += [str(base_disk),str(base_memory),str(disk_hash),str(memory_hash)]
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE, close_fds=True)
-        LOG.info("Start compressing")
-        LOG.info("%s" % ' '.join(cmd))
-        for line in iter(proc.stdout.readline, ''):
-            line = line.replace('\r', '')
-            sys.stdout.write(line)
-            sys.stdout.flush()
+        filelist = [base_disk, base_memory, disk_hash, memory_hash]
+        for filepath in filelist:
+            basename = os.path.basename(filepath)
+            filesize = os.path.getsize(filepath)
+            LOG.info("Zipping %s (%ld bytes) into %s" %
+                     (basename, filesize, outfile))
+            zip.write(filepath, basename)
+        zip.close()
 
 
 class PackagingUtil(object):
@@ -639,7 +627,7 @@ class PackagingUtil(object):
             os.path.join(temp_dir, memory_name): target_memory,
             os.path.join(temp_dir, diskhash_name): target_diskhash,
             os.path.join(temp_dir, memoryhash_name): target_memoryhash,
-            }
+        }
 
         LOG.info("Place base VM to a right directory")
         for (src, dest) in path_list.iteritems():
