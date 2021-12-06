@@ -20,68 +20,79 @@
 from __future__ import division
 import argparse
 import sys
-import time
 import rpyc
 from plumbum import SshMachine
 
 NEPHELE_PORT = 19999
 
+
 def build_base(args, remote):
-    remote.root.stdout_redirect(sys.stdout) #redirect remote's stdout
-    remote.root.stdin_redirect(sys.stdin) #redirect remote's stdin
-    remote.root.stderr_redirect(sys.stdout) #redirect remote's stderr
+    remote.root.stdout_redirect(sys.stdout)  # redirect remote's stdout
+    remote.root.stdin_redirect(sys.stdin)  # redirect remote's stdin
+    remote.root.stderr_redirect(sys.stdout)  # redirect remote's stderr
     remote.root.build_base(args)
     remote.root.restore()
 
+
 def build_snapshot(args, remote):
-    remote.root.stdout_redirect(sys.stdout) #redirect remote's stdout
-    remote.root.stdin_redirect(sys.stdin) #redirect remote's stdin
-    remote.root.stderr_redirect(sys.stdout) #redirect remote's stderr
+    remote.root.stdout_redirect(sys.stdout)  # redirect remote's stdout
+    remote.root.stdin_redirect(sys.stdin)  # redirect remote's stdin
+    remote.root.stderr_redirect(sys.stdout)  # redirect remote's stderr
     remote.root.build_snapshot(args)
     remote.root.restore()
+
 
 def list_base(args, remote):
     print(remote.root.list_base(args))
 
+
 def list_snapshots(args, remote):
     print(remote.root.list_snapshots(args))
+
 
 def list_instances(args, remote):
     print(remote.root.list_instances(args))
 
+
 def delete_snapshot(args, remote):
-    remote.root.stdout_redirect(sys.stdout) #redirect remote's stdout
-    remote.root.stdin_redirect(sys.stdin) #redirect remote's stdin
-    remote.root.stderr_redirect(sys.stdout) #redirect remote's stderr
+    remote.root.stdout_redirect(sys.stdout)  # redirect remote's stdout
+    remote.root.stdin_redirect(sys.stdin)  # redirect remote's stdin
+    remote.root.stderr_redirect(sys.stdout)  # redirect remote's stderr
     remote.root.delete_snapshot(args)
     remote.root.restore()
 
+
 def clear_instances(args, remote):
-    remote.root.stdout_redirect(sys.stdout) #redirect remote's stdout
-    remote.root.stdin_redirect(sys.stdin) #redirect remote's stdin
-    remote.root.stderr_redirect(sys.stdout) #redirect remote's stderr
+    remote.root.stdout_redirect(sys.stdout)  # redirect remote's stdout
+    remote.root.stdin_redirect(sys.stdin)  # redirect remote's stdin
+    remote.root.stderr_redirect(sys.stdout)  # redirect remote's stderr
     remote.root.clear_instances(args)
     remote.root.restore()
 
+
 def delete_base(args, remote):
-    remote.root.stdout_redirect(sys.stdout) #redirect remote's stdout
-    remote.root.stdin_redirect(sys.stdin) #redirect remote's stdin
-    remote.root.stderr_redirect(sys.stdout) #redirect remote's stderr
+    remote.root.stdout_redirect(sys.stdout)  # redirect remote's stdout
+    remote.root.stdin_redirect(sys.stdin)  # redirect remote's stdin
+    remote.root.stderr_redirect(sys.stdout)  # redirect remote's stderr
     remote.root.delete_base(args)
     remote.root.restore()
-                
+
+
 def export_base(args, remote):
-    remote.root.stdout_redirect(sys.stdout) #redirect remote's stdout
+    remote.root.stdout_redirect(sys.stdout)  # redirect remote's stdout
     remote.root.export_base(args)
     remote.root.restore()
 
+
 def import_base(args, remote):
-    remote.root.stdout_redirect(sys.stdout) #redirect remote's stdout
+    remote.root.stdout_redirect(sys.stdout)  # redirect remote's stdout
     remote.root.import_base(args)
     remote.root.restore()
 
+
 def import_snapshot(args, remote):
     remote.root.import_snapshot(args)
+
 
 def synthesize(args, remote):
     async_task = rpyc.async_(remote.root.synthesize)
@@ -89,113 +100,159 @@ def synthesize(args, remote):
     future.set_expiry(5)
     try:
         future.wait()
-    except rpyc.AsyncResultTimeout as art:
+    except rpyc.AsyncResultTimeout:
         pass
     if future.error:
-        print future.value
+        print(future.value)
     else:
-        print "HOST\t\t%s\nTITLE\t\t%s\nSNAPSHOT\t%s\nFWDPORTS\t%s" % (args.host, args.title, args.snapshot, args.ports)
-        print "VM should be resumed shortly; check the virt-manager window."
+        print('HOST\t\t{}\nTITLE\t\t{}\nSNAPSHOT\t{}\nFWDPORTS\t{}'.format(
+            args.host, args.title, args.snapshot, args.ports))
+        print("VM should be resumed shortly; check the virt-manager window.")
+
 
 def snapshot_details(args, remote):
     print(remote.root.snapshot_details(args))
 
+
 def handoff(args, remote):
     print(remote.root.handoff(args))
 
+
 def _main():
-    parser = argparse.ArgumentParser(prog='nephele', description='Manage VMs across cloudlets.')
-    parser.add_argument('host', help="Execute commands on specified remote host.")
+    parser = argparse.ArgumentParser(
+        prog='nephele', description='Manage VMs across cloudlets.')
+    parser.add_argument(
+        'host', help="Execute commands on specified remote host.")
     subparsers = parser.add_subparsers(title='command', dest="command")
 
-    #HANDOFF COMMAND
-    handoff_parser = subparsers.add_parser('handoff', help='Handoff a running instance to another nephele node')
-    handoff_parser.add_argument('title',  help='Title (or UUID) of the VM instance to handoff')
-    handoff_parser.add_argument('dest', help='Handoff destination - IP address or DNS name.')
+    # HANDOFF COMMAND
+    handoff_parser = subparsers.add_parser(
+        'handoff', help='Handoff a running instance to another nephele node')
+    handoff_parser.add_argument(
+        'title',  help='Title (or UUID) of the VM instance to handoff')
+    handoff_parser.add_argument(
+        'dest', help='Handoff destination - IP address or DNS name.')
     handoff_parser.set_defaults(func=handoff)
 
-    #IMAGE COMMANDS
-    base_parser = subparsers.add_parser('image', help='Management of base VM images')
+    # IMAGE COMMANDS
+    base_parser = subparsers.add_parser(
+        'image', help='Management of base VM images')
     base_subparsers = base_parser.add_subparsers(title='base')
-    build_parser = base_subparsers.add_parser('build', help='Build a base image from an existing disk image')
-    build_parser.add_argument('path', help='Path to an existing base image (will be converted to raw format)')
-    build_parser.add_argument('-t', '--title',  help='Title of the VM instance to display in virt-manager')
-    build_parser.add_argument('-c', '--cpu', type=int, help='Override number of vCPUs. By default, the number specified in the VM_TEMPLATE.xml will be used.')
-    build_parser.add_argument('-m', '--mem', type=int, help='Override amount of memory (in KiB). By default, the number specified in the VM_TEMPLATE.xml will be used.')
+    build_parser = base_subparsers.add_parser(
+        'build', help='Build a base image from an existing disk image')
+    build_parser.add_argument(
+        'path', help='Path to an existing base image (will be converted to raw format)')
+    build_parser.add_argument(
+        '-t', '--title',  help='Title of the VM instance to display in virt-manager')
+    build_parser.add_argument(
+        '-c', '--cpu', type=int, help='Override number of vCPUs. By default, the number specified in the VM_TEMPLATE.xml will be used.')
+    build_parser.add_argument(
+        '-m', '--mem', type=int, help='Override amount of memory (in KiB). By default, the number specified in the VM_TEMPLATE.xml will be used.')
     build_parser.set_defaults(func=build_base)
 
-    export_parser = base_subparsers.add_parser('export', help='Export a zip file containing a compressed base image')
+    export_parser = base_subparsers.add_parser(
+        'export', help='Export a zip file containing a compressed base image')
     export_parser.add_argument('id', help='ID of base image to export')
     export_parser.add_argument('dest', help='destination of exported zip file')
     export_parser.set_defaults(func=export_base)
 
-    import_parser = base_subparsers.add_parser('import', help='Import a base image from a compressed zip file')
-    import_parser.add_argument('path', help='an existing zip file containing a base image')
+    import_parser = base_subparsers.add_parser(
+        'import', help='Import a base image from a compressed zip file')
+    import_parser.add_argument(
+        'path', help='an existing zip file containing a base image')
     import_parser.set_defaults(func=import_base)
 
-    list_base_parser = base_subparsers.add_parser('ls', help='List base images tracked by nephele')
+    list_base_parser = base_subparsers.add_parser(
+        'ls', help='List base images tracked by nephele')
     list_base_parser.set_defaults(func=list_base)
 
-    delete_base_parser = base_subparsers.add_parser('rm', help='Remove a base image from nephele')
+    delete_base_parser = base_subparsers.add_parser(
+        'rm', help='Remove a base image from nephele')
     delete_base_parser.add_argument('id', help='ID of base image to remove')
     delete_base_parser.set_defaults(func=delete_base)
 
-    images_parser = subparsers.add_parser('images', help='List base images tracked by nephele')
+    images_parser = subparsers.add_parser(
+        'images', help='List base images tracked by nephele')
     images_parser.set_defaults(func=list_base)
 
-    list_instances_parser = subparsers.add_parser('ps', help='List running nephele instances')
+    list_instances_parser = subparsers.add_parser(
+        'ps', help='List running nephele instances')
     list_instances_parser.set_defaults(func=list_instances)
 
-    #RUN COMMAND
-    run_parser = subparsers.add_parser('run', help='Instantiate a VM from an existing snapshot')
-    run_parser.add_argument('snapshot', help='Disk/memory snapshot to instantiate from')
-    run_parser.add_argument('title',  help='Title of the VM instance to display in virt-manager')
-    run_parser.add_argument('-d', '--disk-only', action='store_true',  help='Ignore memory, create delta from disk blocks only. (default=False)')
-    run_parser.add_argument('-p', '--ports', help='Comma separated list of ports to forward from host to guest. -p 80,443,8080,8443')
+    # RUN COMMAND
+    run_parser = subparsers.add_parser(
+        'run', help='Instantiate a VM from an existing snapshot')
+    run_parser.add_argument(
+        'snapshot', help='Disk/memory snapshot to instantiate from')
+    run_parser.add_argument(
+        'title',  help='Title of the VM instance to display in virt-manager')
+    run_parser.add_argument('-d', '--disk-only', action='store_true',
+                            help='Ignore memory, create delta from disk blocks only. (default=False)')
+    run_parser.add_argument(
+        '-p', '--ports', help='Comma separated list of ports to forward from host to guest. -p 80,443,8080,8443')
     run_parser.set_defaults(func=synthesize)
 
-    #SNAPSHOT COMMANDS
-    snapshot_parser = subparsers.add_parser('snapshot', help='Management of VM snapshots')
+    # SNAPSHOT COMMANDS
+    snapshot_parser = subparsers.add_parser(
+        'snapshot', help='Management of VM snapshots')
     snapshot_subparsers = snapshot_parser.add_subparsers(title='snapshot')
 
-    build_snapshot_parser = snapshot_subparsers.add_parser('build', help='Interact with a base VM to create a new snapshot')
-    build_snapshot_parser.add_argument('id', help='an existing base image to start with')
-    build_snapshot_parser.add_argument('dest', help='Destination path for snapshot')
-    build_snapshot_parser.add_argument('-t', '--title',  help='Title of the VM instance to display in virt-manager')
-    build_snapshot_parser.add_argument('-d', '--disk-only', action='store_true',  help='Ignore memory, create delta from disk blocks only. (default=False)')
-    build_snapshot_parser.add_argument('-m', '--free-mem', action='store_true', help='Extract free memory (default=False)')
-    build_snapshot_parser.add_argument('-n', '--no-trim', action='store_true', help='Disable TRIM support. (default=False)')
-    build_snapshot_parser.add_argument('-z', '--zip', default=True, action='store_true', help='Package snapshot files into a single zip. (default=True))')
+    build_snapshot_parser = snapshot_subparsers.add_parser(
+        'build', help='Interact with a base VM to create a new snapshot')
+    build_snapshot_parser.add_argument(
+        'id', help='an existing base image to start with')
+    build_snapshot_parser.add_argument(
+        'dest', help='Destination path for snapshot')
+    build_snapshot_parser.add_argument(
+        '-t', '--title',  help='Title of the VM instance to display in virt-manager')
+    build_snapshot_parser.add_argument('-d', '--disk-only', action='store_true',
+                                       help='Ignore memory, create delta from disk blocks only. (default=False)')
+    build_snapshot_parser.add_argument(
+        '-m', '--free-mem', action='store_true', help='Extract free memory (default=False)')
+    build_snapshot_parser.add_argument(
+        '-n', '--no-trim', action='store_true', help='Disable TRIM support. (default=False)')
+    build_snapshot_parser.add_argument('-z', '--zip', default=True, action='store_true',
+                                       help='Package snapshot files into a single zip. (default=True))')
     build_snapshot_parser.set_defaults(func=build_snapshot)
 
-    import_snapshot_parser = snapshot_subparsers.add_parser('import', help='Import a snapshot from a compressed zip file')
-    import_snapshot_parser.add_argument('path', help='an existing zip file containing a snapshot')
+    import_snapshot_parser = snapshot_subparsers.add_parser(
+        'import', help='Import a snapshot from a compressed zip file')
+    import_snapshot_parser.add_argument(
+        'path', help='an existing zip file containing a snapshot')
     import_snapshot_parser.set_defaults(func=import_snapshot)
 
-    inspect_parser = snapshot_subparsers.add_parser('inspect', help='Output details of a snapshot')
-    inspect_parser.add_argument('path', help='Path to an existing snapshot to inspect')
+    inspect_parser = snapshot_subparsers.add_parser(
+        'inspect', help='Output details of a snapshot')
+    inspect_parser.add_argument(
+        'path', help='Path to an existing snapshot to inspect')
     inspect_parser.set_defaults(func=snapshot_details)
 
-    list_snapshot_parser = snapshot_subparsers.add_parser('ls', help='List snapshots known to nephele')
+    list_snapshot_parser = snapshot_subparsers.add_parser(
+        'ls', help='List snapshots known to nephele')
     list_snapshot_parser.set_defaults(func=list_snapshots)
 
-    delete_snapshot_parser = snapshot_subparsers.add_parser('rm', help='Remove a snapshot from nephele')
-    delete_snapshot_parser.add_argument('path', help='Path of snapshot to remove')
+    delete_snapshot_parser = snapshot_subparsers.add_parser(
+        'rm', help='Remove a snapshot from nephele')
+    delete_snapshot_parser.add_argument(
+        'path', help='Path of snapshot to remove')
     delete_snapshot_parser.set_defaults(func=delete_snapshot)
 
-    snapshots_parser = subparsers.add_parser('snapshots', help='List snapshots known to nephele')
+    snapshots_parser = subparsers.add_parser(
+        'snapshots', help='List snapshots known to nephele')
     snapshots_parser.set_defaults(func=list_snapshots)
 
     if len(sys.argv) == 1:
         parser.print_help()
     args = parser.parse_args()
     cfg = dict(
-        {"allow_public_attrs":True, #can only write to stdout if we allow public attrs
-         "sync_request_timeout":None}) #needed for long running operations like nephele run
+        {"allow_public_attrs": True,  # can only write to stdout if we allow public attrs
+         "sync_request_timeout": None})  # needed for long running operations like nephele run
 
-    remote = rpyc.ssh_connect(SshMachine(args.host, user="root"), NEPHELE_PORT, config=cfg) 
+    remote = rpyc.ssh_connect(SshMachine(
+        args.host, user="root"), NEPHELE_PORT, config=cfg)
     ret = args.func(args, remote) or 0
     sys.exit(ret)
+
 
 if __name__ == '__main__':
     _main()

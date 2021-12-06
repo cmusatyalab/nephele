@@ -18,30 +18,15 @@
 #   limitations under the License.
 #
 
-import argparse
-import datetime
-import errno
 import json
 import glob
 import libvirt
-from libvirt import libvirtError
-from lxml import etree
 import msgpack
 import os
-import random
-import shutil
 import signal
-import subprocess
 import sys
 from tempfile import NamedTemporaryFile
-import textwrap
-import threading
-import time
-from uuid import uuid4
 import zipfile
-from fabric.api import run, env
-import socket
-from argparse import Namespace #needed to parse args parameters that are sent via RPC
 import rpyc
 
 from elijah.provisioning import synthesis as synthesis
@@ -65,10 +50,12 @@ with open('/var/nephele/logging.json') as f:
 
 LOG = logging.getLogger(__name__)
 
+
 class AuthenticationError(Exception):
     def __init__(self, peer):
         self.msg = 'Unauthorized connection.'
         LOG.error("Unauthorized connection attempt from %s", peer)
+
 
 def SSHAuthenticator(sock):
     sockname = sock.getsockname()
@@ -78,6 +65,7 @@ def SSHAuthenticator(sock):
     if peername[0] != '127.0.0.1':
         raise AuthenticationError(peername)
     return sock, sock.getsockname()
+
 
 class Nephele(rpyc.Service):
     def x_stdout_redirect(self, stdout):
@@ -123,12 +111,13 @@ class Nephele(rpyc.Service):
         print "Copying/converting source image into %s..." % DIR_NEPHELE_IMAGES
         os.system('qemu-img convert -O raw %s %s' % (source, disk_image_path))
 
-        disk_path, mem_path = synthesis.create_baseVM(disk_image_path, source=source, title=args.title, cpus=args.cpu, mem=args.mem)
+        disk_path, mem_path = synthesis.create_baseVM(
+            disk_image_path, source=source, title=args.title, cpus=args.cpu, mem=args.mem)
         print "Created Base VM from this source image: %s" % source
         print "Base Disk Image: %s" % disk_path
         print "Base Memory Snapshot: %s" % mem_path
 
-        #restart the stream-server to reload list of images
+        # restart the stream-server to reload list of images
         os.system('service stream-server restart')
 
     def x_build_snapshot(self, args):
@@ -143,10 +132,11 @@ class Nephele(rpyc.Service):
             if base is None:
                 print "Failed to find matching image with id: %s" % args.id
                 return
-            vm_overlay = synthesis.VM_Overlay(base.disk_path, options, qemu_args=None)
+            vm_overlay = synthesis.VM_Overlay(
+                base.disk_path, options, qemu_args=None)
             machine = vm_overlay.resume_basevm(args.title)
-            print 'Launching VM...\nPause VM when finished modifying to begin hashing of disk/memory state.'  
-            #wait until VM is paused
+            print 'Launching VM...\nPause VM when finished modifying to begin hashing of disk/memory state.'
+            # wait until VM is paused
             while True:
                 state, _ = machine.state()
                 if state == libvirt.VIR_DOMAIN_PAUSED:
@@ -156,10 +146,11 @@ class Nephele(rpyc.Service):
 
             # print output
             if args.zip is False:
-                LOG.info("overlay metafile (%ld) : %s",os.path.getsize(vm_overlay.overlay_metafile),
-                                    vm_overlay.overlay_metafile)
+                LOG.info("overlay metafile (%ld) : %s", os.path.getsize(vm_overlay.overlay_metafile),
+                         vm_overlay.overlay_metafile)
                 for overlay_file in vm_overlay.overlay_files:
-                    LOG.info("overlay (%ld) : %s",os.path.getsize(overlay_file), overlay_file)
+                    LOG.info("overlay (%ld) : %s", os.path.getsize(
+                        overlay_file), overlay_file)
             else:
                 overlay_zip = zipfile.ZipFile(vm_overlay.overlay_zipfile)
                 filesize_count = 0
@@ -167,10 +158,12 @@ class Nephele(rpyc.Service):
                     if zipinfo.filename == Const.OVERLAY_META:
                         msg = "meta file : (%ld) bytes" % (zipinfo.file_size)
                     else:
-                        msg = "blob file : (%ld) bytes (%s)" % (zipinfo.file_size, zipinfo.filename)
+                        msg = "blob file : (%ld) bytes (%s)" % (
+                            zipinfo.file_size, zipinfo.filename)
                     filesize_count += zipinfo.file_size
                     LOG.info(msg)
-                LOG.info("zip overhead : (%ld) bytes",os.path.getsize(vm_overlay.overlay_zipfile) - filesize_count)
+                LOG.info("zip overhead : (%ld) bytes", os.path.getsize(
+                    vm_overlay.overlay_zipfile) - filesize_count)
         except Exception as e:
             print "Failed to create overlay: %s" % str(e)
         os.rename(vm_overlay.overlay_zipfile, args.dest)
@@ -187,23 +180,29 @@ class Nephele(rpyc.Service):
     def x_list_base(self, args):
         dbconn = DBConnector()
         items = dbconn.list_item(table_def.BaseVM)
-        output =  "{:<12}{:^8}{:<43}{:^8}{:<43}\n".format('IMAGE ID', '', 'NAME (/var/nephele/images/)', '', 'SOURCE')
+        output = "{:<12}{:^8}{:<43}{:^8}{:<43}\n".format(
+            'IMAGE ID', '', 'NAME (/var/nephele/images/)', '', 'SOURCE')
         for item in items:
-            output = output + "{:<12}{:^8}{:<43}{:^8}{:<43}\n".format(item.hash_value[:12],'', item.disk_path[item.disk_path.rindex('/')+1:], '', item.source)
+            output = output + "{:<12}{:^8}{:<43}{:^8}{:<43}\n".format(
+                item.hash_value[:12], '', item.disk_path[item.disk_path.rindex('/')+1:], '', item.source)
         return output
 
     def x_list_snapshots(self, args):
         dbconn = DBConnector()
         items = dbconn.list_item(table_def.Snapshot)
-        output = "{:<43}{:^8}{:<12}{:^8}{:<43}\n".format('SNAPSHOT', '', 'IMAGE ID', '', 'CREATED')
+        output = "{:<43}{:^8}{:<12}{:^8}{:<43}\n".format(
+            'SNAPSHOT', '', 'IMAGE ID', '', 'CREATED')
         for item in items:
-            output = output + "{:<43}{:^8}{:<12}{:^8}{:<43}\n".format(item.path, '', item.basevm[:12], '', str(item.create_time))
+            output = output + "{:<43}{:^8}{:<12}{:^8}{:<43}\n".format(
+                item.path, '', item.basevm[:12], '', str(item.create_time))
         return output
 
     def x_list_instances(self, args):
-        output = "{:<6}{:^1}{:<15}{:^1}{:<12}{:^1}{:<36}{:^1}{:<19}{:^1}{:<50}\n".format('PID', '', 'TITLE', '', 'PORTS', '', 'UUID', '', 'STARTED', '', 'HANDOFFURL')
+        output = "{:<6}{:^1}{:<15}{:^1}{:<12}{:^1}{:<36}{:^1}{:<19}{:^1}{:<50}\n".format(
+            'PID', '', 'TITLE', '', 'PORTS', '', 'UUID', '', 'STARTED', '', 'HANDOFFURL')
         for item in self.walk_nephele_pids():
-            output = output + "{:<6}{:^1}{:<15}{:^1}{:<12}{:^1}{:<36}{:^1}{:<19}{:^1}{:<50}\n".format(item['pid'], '', item['title'], '', item['ports'], '', item['uuid'], '', item['started'], '', item['url'])
+            output = output + "{:<6}{:^1}{:<15}{:^1}{:<12}{:^1}{:<36}{:^1}{:<19}{:^1}{:<50}\n".format(
+                item['pid'], '', item['title'], '', item['ports'], '', item['uuid'], '', item['started'], '', item['url'])
         return output
 
     def x_delete_snapshot(self, args):
@@ -258,9 +257,9 @@ class Nephele(rpyc.Service):
         if os.path.exists(source) is False or os.access(source, os.R_OK) is False:
             print "Cannot read file: %s" % source
             return 1
-    
+
         (base_hashvalue, disk_name, _, _, _) = \
-                PackagingUtil._get_basevm_attribute(source)
+            PackagingUtil._get_basevm_attribute(source)
         disk_image_path = DIR_NEPHELE_IMAGES + disk_name
 
         # check if this filename already exists and warn
@@ -279,7 +278,7 @@ class Nephele(rpyc.Service):
         dbconn = DBConnector()
         dbconn.add_item(new_basevm)
 
-        #restart the stream-server to reload list of images
+        # restart the stream-server to reload list of images
         os.system('service stream-server restart')
 
     def x_import_snapshot(self, args):
@@ -287,8 +286,10 @@ class Nephele(rpyc.Service):
             msg = "Snapshot path (%s) does not exist!" % (args.path)
         else:
             url = 'file://' + os.path.abspath(args.path)
-            overlay_filename = NamedTemporaryFile(prefix="cloudlet-overlay-file-")
-            meta_info = compression.decomp_overlayzip(url, overlay_filename.name)
+            overlay_filename = NamedTemporaryFile(
+                prefix="cloudlet-overlay-file-")
+            meta_info = compression.decomp_overlayzip(
+                url, overlay_filename.name)
 
             base_sha = meta_info[Const.META_BASE_VM_SHA256]
             base_found = False
@@ -299,7 +300,8 @@ class Nephele(rpyc.Service):
                     base_found = True
                     break
             if not base_found:
-                msg = "Cannot find base image (SHA-256: %s) referenced in overlay: %s" % (base_sha, args.path)
+                msg = "Cannot find base image (SHA-256: %s) referenced in overlay: %s" % (
+                    base_sha, args.path)
             else:
                 # save the result to DB
                 items = dbconn.list_item(table_def.Snapshot)
@@ -320,15 +322,15 @@ class Nephele(rpyc.Service):
             overlay_meta)
         if is_zip_contained is True:
             overlay_meta = url_path
-        LOG.info( "Beginning synthesis of: %s", args.snapshot)
+        LOG.info("Beginning synthesis of: %s", args.snapshot)
         try:
             path = synthesis.generate_pidfile(args.title, args.ports)
             synthesis.synthesize(None, overlay_meta,
-                                disk_only=args.disk_only,
-                                handoff_url=None,
-                                zip_container=is_zip_contained,
-                                title=args.title,
-                                fwd_ports=args.ports)
+                                 disk_only=args.disk_only,
+                                 handoff_url=None,
+                                 zip_container=is_zip_contained,
+                                 title=args.title,
+                                 fwd_ports=args.ports)
         except Exception as e:
             LOG.error("Failed to synthesize: %s", str(e))
             err = True
@@ -360,7 +362,7 @@ class Nephele(rpyc.Service):
     def x_handoff(self, args):
         handoff_url = 'tcp://' + args.dest + ':8022'
 
-        #see if we can find a matching pid first by title, then uuid
+        # see if we can find a matching pid first by title, then uuid
         title_matched = False
         uuid_matched = False
         metadata = None
@@ -368,7 +370,8 @@ class Nephele(rpyc.Service):
         for item in self.walk_nephele_pids():
             if item["title"] == args.title:
                 if title_matched == True:
-                    raise Exception("Ambiguous instance (TITLE: %s matches more than one instance) ; try using UUID instead!" % args.title)
+                    raise Exception(
+                        "Ambiguous instance (TITLE: %s matches more than one instance) ; try using UUID instead!" % args.title)
                 title_matched = True
                 metadata = item
                 matching_path = item['path']
@@ -378,9 +381,10 @@ class Nephele(rpyc.Service):
                 matching_path = item['path']
 
         if not uuid_matched and not title_matched:
-            raise Exception("Could not find an instance (using TITLE or UUID) that matches %s!" % args.title)
+            raise Exception(
+                "Could not find an instance (using TITLE or UUID) that matches %s!" % args.title)
         else:
-            #send USR1 to that process and put the destination into the pid file
+            # send USR1 to that process and put the destination into the pid file
             fdest = open(matching_path, "wb")
             metadata['url'] = handoff_url
             fdest.write(msgpack.packb(metadata))
@@ -390,9 +394,11 @@ class Nephele(rpyc.Service):
 
 
 def _main():
-    cfg = {"exposed_prefix":"x_"}
-    t = rpyc.utils.server.ForkingServer(Nephele, logger=LOG, protocol_config=cfg, port=RPC_PORT, authenticator=SSHAuthenticator)
+    cfg = {"exposed_prefix": "x_"}
+    t = rpyc.utils.server.ForkingServer(
+        Nephele, logger=LOG, protocol_config=cfg, port=RPC_PORT, authenticator=SSHAuthenticator)
     t.start()
+
 
 if __name__ == '__main__':
     _main()
